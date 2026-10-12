@@ -1,0 +1,17 @@
+string frame_id "map"
+flight_interfaces/Waypoint[] waypoints
+float64 position_tolerance_m 0.1
+bool check_yaw true
+float64 yaw_tolerance_rad 0.1745329252
+float64 dwell_sec 0.5
+float64 waypoint_timeout_sec 60.0
+bool loop
+---
+flight_interfaces/ActionResult result
+uint32 completed_count
+---
+flight_interfaces/ActionFeedback feedback
+uint32 current_index
+uint32 completed_count
+uint32 cycle_count
+float64 dwell_elapsed_sec

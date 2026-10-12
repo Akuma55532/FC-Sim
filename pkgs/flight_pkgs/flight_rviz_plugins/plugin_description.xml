@@ -1,0 +1,5 @@
+<library path="flight_panel">
+  <class name="flight_rviz_plugins/FlightPanel" type="flight_rviz_plugins::FlightPanel" base_class_type="rviz_common::Panel">
+    <description>Flight control, waypoint editing, execution and feedback.</description>
+  </class>
+</library>

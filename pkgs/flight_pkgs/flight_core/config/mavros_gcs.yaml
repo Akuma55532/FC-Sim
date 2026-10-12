@@ -1,0 +1,6 @@
+# flight_ws runs on the ground station: MAVROS provides the GCS heartbeat.
+# Override only the sys plugin and preserve upstream PX4 plugin defaults.
+/**/sys:
+  ros__parameters:
+    heartbeat_mav_type: GCS
+    heartbeat_rate: 1.0

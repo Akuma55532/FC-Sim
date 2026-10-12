@@ -1,0 +1,5 @@
+# No goal fields.
+---
+flight_interfaces/ActionResult result
+---
+flight_interfaces/ActionFeedback feedback
