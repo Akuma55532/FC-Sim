@@ -1,0 +1,18 @@
+# Absolute map/ENU coordinates. Use near the default SITL origin after takeoff.
+schema_version: 1
+frame_id: map
+vehicles:
+  - namespace: /flight_core
+    options:
+      position_tolerance_m: 0.15
+      yaw_tolerance_deg: 10.0
+      dwell_sec: 0.5
+      waypoint_timeout_sec: 60.0
+      check_yaw: true
+      loop: false
+    waypoints:
+      - {x: 0.0, y: 0.0, z: 1.0, yaw_deg: 0.0}
+      - {x: 1.0, y: 0.0, z: 1.0, yaw_deg: 0.0}
+      - {x: 1.0, y: 1.0, z: 1.0, yaw_deg: 0.0}
+      - {x: 0.0, y: 1.0, z: 1.0, yaw_deg: 0.0}
+      - {x: 0.0, y: 0.0, z: 1.0, yaw_deg: 0.0}

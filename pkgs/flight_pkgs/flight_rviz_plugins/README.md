@@ -1,6 +1,6 @@
 # flight_rviz_plugins：独立 RViz2 飞行控制面板
 
-[文档导航](../../docs/README.md) · 前置：[快速开始](../../docs/QUICKSTART.md) · [状态参考](../../docs/CONTROL_STATUS.md) · [排障指南](../../docs/TROUBLESHOOTING.md)
+[文档导航](../../../docs/README.md) · 前置：[快速开始](../../../docs/QUICKSTART.md) · [面板教程](../../../docs/RVIZ_PANEL.md) · [航点任务](../../../docs/WAYPOINTS.md)
 
 面向 ROS 2 Humble。仅依赖 flight_interfaces 及标准 ROS/RViz/Qt 接口，不依赖 flight_core 的 C++ 实现、MAVROS 或 PX4。
 基本动作与任务执行由独立运行的 flight_core 负责；面板不发送持续控制目标，不在界面内判断任务完成。
@@ -8,7 +8,12 @@
 ## 启动
 
 ```bash
-source ~/ws_simulator/flight_ws/install/setup.bash
+export FC_SIM_ROOT="$HOME/FC-Sim"
+source /opt/ros/humble/setup.bash
+source "$HOME/mavros_humble_ws/install/setup.bash"
+source "$FC_SIM_ROOT/install/setup.bash"
+export ROS_DOMAIN_ID=42
+export ROS_LOCALHOST_ONLY=1
 ros2 launch flight_rviz_plugins panel.launch.py
 ```
 
@@ -42,7 +47,7 @@ RViz 配置保存该名称；航点内容通过 YAML 文件保存，不隐式保
 - X/Y/Z 以米显示，Yaw 以度显示；位姿无效或状态过期时显示 `—`，避免将旧数值误认为当前位置。
 - 航点进度、位置保持、状态说明分别显示，失败及故障保持使用红色提示；操作请求结果单独显示在卡片下方。
 
-字段含义见 [ControlStatus 说明](../../docs/CONTROL_STATUS.md)。本次调整仅涉及面板展示，控制准入及动作执行逻辑保持原有规则。
+状态字段见[状态参考](../../../docs/CONTROL_STATUS.md)，操作及常见问题见[面板教程](../../../docs/RVIZ_PANEL.md)。
 
 ## 航点编辑与到点判断
 
@@ -90,6 +95,6 @@ vehicles:
 
 ## 验证与开发
 
-构建与测试命令统一见 [开发与测试](../../docs/DEVELOPMENT.md)。
+构建见[编译项目](../../../docs/BUILD.md)，本次测试命令与结果见[验证记录](../../../docs/VALIDATION.md)。
 面板测试使用 Qt offscreen 和本地假服务，覆盖插件加载、编辑、异步请求、结果显示、状态过期、单步与偏航映射；文件测试覆盖多车辆 YAML 往返与非法输入。
-离屏测试与截图已检查，真实 RViz2 + PX4 SITL 的完整人工操作验收仍需记录，历史验证见 [重构计划](../../../REFACTOR_PLAN.md)。
+真实 RViz2 + PX4 SITL 的完整人工操作验收仍需记录；请区分离屏自动化测试和实际按钮操作验收。

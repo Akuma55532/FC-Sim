@@ -1,0 +1,4 @@
+# colcon outputs in the repository root
+/build/
+/install/
+/log/
