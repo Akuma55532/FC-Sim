@@ -1,6 +1,6 @@
 # flight_rviz_plugins：独立 RViz2 飞行控制面板
 
-[文档导航](../../../docs/README.md) · 前置：[快速开始](../../../docs/QUICKSTART.md) · [面板教程](../../../docs/RVIZ_PANEL.md) · [航点任务](../../../docs/WAYPOINTS.md)
+[文档导航](../../docs/README.md) · 前置：[快速开始](../../docs/QUICKSTART.md) · [状态参考](../../docs/CONTROL_STATUS.md) · [排障指南](../../docs/TROUBLESHOOTING.md)
 
 面向 ROS 2 Humble。仅依赖 flight_interfaces 及标准 ROS/RViz/Qt 接口，不依赖 flight_core 的 C++ 实现、MAVROS 或 PX4。
 基本动作与任务执行由独立运行的 flight_core 负责；面板不发送持续控制目标，不在界面内判断任务完成。
@@ -8,12 +8,7 @@
 ## 启动
 
 ```bash
-export FC_SIM_ROOT="$HOME/FC-Sim"
-source /opt/ros/humble/setup.bash
-source "$HOME/mavros_humble_ws/install/setup.bash"
-source "$FC_SIM_ROOT/install/setup.bash"
-export ROS_DOMAIN_ID=42
-export ROS_LOCALHOST_ONLY=1
+source ~/ws_simulator/flight_ws/install/setup.bash
 ros2 launch flight_rviz_plugins panel.launch.py
 ```
 
@@ -47,7 +42,7 @@ RViz 配置保存该名称；航点内容通过 YAML 文件保存，不隐式保
 - X/Y/Z 以米显示，Yaw 以度显示；位姿无效或状态过期时显示 `—`，避免将旧数值误认为当前位置。
 - 航点进度、位置保持、状态说明分别显示，失败及故障保持使用红色提示；操作请求结果单独显示在卡片下方。
 
-状态字段见[状态参考](../../../docs/CONTROL_STATUS.md)，操作及常见问题见[面板教程](../../../docs/RVIZ_PANEL.md)。
+字段含义见 [ControlStatus 说明](../../docs/CONTROL_STATUS.md)。本次调整仅涉及面板展示，控制准入及动作执行逻辑保持原有规则。
 
 ## 航点编辑与到点判断
 
@@ -68,6 +63,19 @@ MarkerArray 发布到 `<核心名称>/panel_markers`：蓝色箭头与编号为�
 改草稿不改变橙色实际目标。状态过期后不显示当前目标，草稿仍可编辑。
 默认 RViz 配置订阅 `/flight_core/panel_markers`；更换核心名称后需同步修改 MarkerArray 显示的 Topic。
 同一核心建议只开一个面板实例，避免同名 Marker 互相覆盖；这不影响核心的任务仲裁。
+
+## 实际飞行轨迹
+
+面板从 `<核心名称>/control_status` 的 `current_pose` 记录实际位置，在现有 `panel_markers` 中发布青绿色线条（命名空间 `actual_trajectory`）。
+配套 RViz 配置默认显示；已有 RViz 配置只需启用订阅该话题的 MarkerArray，并将 Fixed Frame 设为 map。
+轨迹与蓝色航点草稿、橙色当前目标含义不同：它表示面板收到的实际位置历史，不是规划路径。
+
+- “显示实际轨迹”默认勾选，取消仅隐藏，后台继续记录；“清空轨迹”删除历史，从下一份有效位置重新记录。
+- 只记录连接、遥测和位姿均有效且新鲜的 map 坐标，按 XYZ 距离至少 5 cm 增加线段，保留最近 2000 条线段，线宽 3.5 cm。
+- 遥测过期、时间戳间隔超过 1 s、乱序、位姿无效或坐标帧错误时断开连接；之前的轨迹仍可查看，恢复后另起一段。
+- 记录从面板连接开始，包括地面移动；降落不会自动清空，便于查看完整起降。重连核心、切换核心或重启面板会清空历史。
+- 历史只在面板内存中，不写入航点 YAML；未打开面板期间不记录，不能代替飞控日志。采样依据 ControlStatus 汇总时间，而非原始传感器时间。
+- 切换核心名称时，RViz 的 MarkerArray Topic 也需对应修改。定位原点重置无法仅靠轨迹判断，重置后请清空历史。
 
 ## 航点文件
 
@@ -95,6 +103,6 @@ vehicles:
 
 ## 验证与开发
 
-构建见[编译项目](../../../docs/BUILD.md)，本次测试命令与结果见[验证记录](../../../docs/VALIDATION.md)。
+构建与测试命令统一见 [开发与测试](../../docs/DEVELOPMENT.md)。
 面板测试使用 Qt offscreen 和本地假服务，覆盖插件加载、编辑、异步请求、结果显示、状态过期、单步与偏航映射；文件测试覆盖多车辆 YAML 往返与非法输入。
-真实 RViz2 + PX4 SITL 的完整人工操作验收仍需记录；请区分离屏自动化测试和实际按钮操作验收。
+离屏测试与截图已检查，真实 RViz2 + PX4 SITL 的完整人工操作验收仍需记录，历史验证见 [重构计划](../../../REFACTOR_PLAN.md)。

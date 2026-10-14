@@ -6,6 +6,7 @@
 #include <QLineEdit>
 #include <rclcpp/rclcpp.hpp>
 #include <flight_interfaces/msg/control_status.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 #include "flight_rviz_plugins/flight_panel.hpp"
 #include <thread>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -91,5 +92,34 @@ TEST(Panel, SingleStepUsesSnapshotYawOptionAndAdvancesOnlyOnSuccess) {
   auto result=std::make_shared<A::Result>();result->result.outcome_code=0;result->completed_count=1;handle->succeed(result);
   for(int i=0;i<100 && table->currentRow()!=1;++i){spin();}
   EXPECT_EQ(table->currentRow(),1);
+  ex.remove_node(node);
+}
+
+TEST(Panel, ActualTrajectoryPublishesHidesAndClears) {
+  flight_rviz_plugins::FlightPanel panel;
+  panel.findChild<QLineEdit*>("core_namespace")->setText("/panel_trail_test");
+  panel.findChild<QPushButton*>("connect")->click();
+  auto node=std::make_shared<rclcpp::Node>("panel_trail_mock");
+  auto qos=rclcpp::QoS(1).reliable().transient_local();
+  auto pub=node->create_publisher<flight_interfaces::msg::ControlStatus>("/panel_trail_test/control_status",qos);
+  std::vector<geometry_msgs::msg::Point> points;
+  auto sub=node->create_subscription<visualization_msgs::msg::MarkerArray>("/panel_trail_test/panel_markers",qos,
+    [&](visualization_msgs::msg::MarkerArray::ConstSharedPtr m){points.clear();for(const auto &v:m->markers)if(v.ns=="actual_trajectory")points=v.points;});
+  rclcpp::executors::SingleThreadedExecutor ex;ex.add_node(node);
+  auto sample=[&](double x){
+    flight_interfaces::msg::ControlStatus s;s.header.stamp=node->now();s.header.frame_id="map";
+    s.connected=true;s.telemetry_valid=true;s.pose_valid=true;s.current_pose.position.x=x;
+    s.target_pose.position.x=99;pub->publish(s);pump(0.08);ex.spin_some();
+  };
+  for(int i=0;i<20;++i)sample(0);
+  for(int i=0;i<20 && points.empty();++i)sample(1);
+  ASSERT_EQ(points.size(),2u);EXPECT_DOUBLE_EQ(points.back().x,1);
+  panel.findChild<QCheckBox*>("show_trajectory")->setChecked(false);
+  sample(2);EXPECT_TRUE(points.empty());
+  panel.findChild<QCheckBox*>("show_trajectory")->setChecked(true);
+  sample(2);ASSERT_EQ(points.size(),4u);EXPECT_DOUBLE_EQ(points.back().x,2);
+  panel.findChild<QPushButton*>("clear_trajectory")->click();sample(2);EXPECT_TRUE(points.empty());
+  sample(3);ASSERT_EQ(points.size(),2u);EXPECT_DOUBLE_EQ(points.front().x,2);
+  panel.findChild<QPushButton*>("connect")->click();sample(3);EXPECT_TRUE(points.empty());
   ex.remove_node(node);
 }

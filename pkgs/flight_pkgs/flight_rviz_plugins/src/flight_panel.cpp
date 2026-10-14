@@ -1,5 +1,6 @@
 #include "flight_rviz_plugins/flight_panel.hpp"
 #include "flight_rviz_plugins/waypoint_file.hpp"
+#include "flight_rviz_plugins/trajectory.hpp"
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/expand_topic_or_service_name.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -56,7 +57,8 @@ struct FlightPanel::Impl {
   QFrame *status_card;
   QTableWidget * table;
   QDoubleSpinBox *height,*default_z,*position_tol,*yaw_tol,*dwell,*timeout;
-  QCheckBox *check_yaw,*loop;
+  QCheckBox *check_yaw,*loop,*show_trajectory;
+  Trajectory trajectory;
   QSpinBox *capacity;
   QPushButton *arm_button,*disarm_button,*takeoff_button,*land_button,*run_button,*step_button,*stop_button,*bind_button;
   QTimer *timer;
@@ -121,6 +123,12 @@ struct FlightPanel::Impl {
     task_value->setStyleSheet("color:#52657d;font-size:12px;");card->addWidget(task_value);
     detail_value=new QLabel;detail_value->setObjectName("status_detail");detail_value->setWordWrap(true);detail_value->setTextFormat(Qt::PlainText);detail_value->setTextInteractionFlags(Qt::TextSelectableByMouse);card->addWidget(detail_value);
     layout->addWidget(status_card);
+    auto *trail_controls=new QHBoxLayout;
+    show_trajectory=new QCheckBox("显示实际轨迹（青绿色）");show_trajectory->setObjectName("show_trajectory");show_trajectory->setChecked(true);
+    auto *clear_trail=new QPushButton("清空轨迹");clear_trail->setObjectName("clear_trajectory");
+    trail_controls->addWidget(show_trajectory);trail_controls->addStretch();trail_controls->addWidget(clear_trail);layout->addLayout(trail_controls);
+    QObject::connect(show_trajectory,&QCheckBox::toggled,p,[this]{dirty=true;});
+    QObject::connect(clear_trail,&QPushButton::clicked,p,[this]{trajectory.clear();dirty=true;});
     result_label=new QLabel("操作反馈 · 尚未发送命令");result_label->setObjectName("result");result_label->setWordWrap(true);result_label->setTextFormat(Qt::PlainText);
     result_label->setStyleSheet("QLabel {background:#eef2f7;color:#334155;border-radius:6px;padding:8px;font-size:12px;}");layout->addWidget(result_label);
     auto *controls=new QGridLayout;
@@ -172,7 +180,7 @@ struct FlightPanel::Impl {
       append({m->pose.position.x,m->pose.position.y,default_z->value(),yaw(q)*180/pi});});
     bind();
     timer=new QTimer(p);QObject::connect(timer,&QTimer::timeout,p,[this]{
-      executor.spin_some(std::chrono::milliseconds(2));update_buttons();if(dirty || !fresh()){publish_markers();dirty=false;}});timer->start(50);
+      executor.spin_some(std::chrono::milliseconds(2));if(!fresh())trajectory.break_segment();update_buttons();if(dirty || !fresh()){publish_markers();dirty=false;}});timer->start(50);
   }
   ~Impl(){timer->stop();executor.remove_node(node);}
   void message(const QString &text){result_label->setText(text);}
@@ -195,12 +203,15 @@ struct FlightPanel::Impl {
       }
       if(markers){visualization_msgs::msg::MarkerArray a;visualization_msgs::msg::Marker m;m.action=m.DELETEALL;a.markers.push_back(m);markers->publish(a);}
       pending=0;stop_pending=false;land_pending=false;
-      core=next;endpoint->setText(QString::fromStdString(core));++generation;seen=false;executing.clear();
+      core=next;endpoint->setText(QString::fromStdString(core));++generation;seen=false;executing.clear();trajectory.clear();
       arm=rclcpp_action::create_client<Arm>(node,core+"/arm");disarm=rclcpp_action::create_client<Disarm>(node,core+"/disarm");
       takeoff=rclcpp_action::create_client<Takeoff>(node,core+"/takeoff");land=rclcpp_action::create_client<Land>(node,core+"/land_action");
       mission=rclcpp_action::create_client<Mission>(node,core+"/execute_waypoints");stop=node->create_client<std_srvs::srv::Trigger>(core+"/stop");
       auto qos=rclcpp::QoS(1).reliable().transient_local();
-      status_sub=node->create_subscription<Status>(core+"/control_status",qos,[this](Status::ConstSharedPtr s){state=*s;seen=true;received=std::chrono::steady_clock::now();dirty=true;});
+      status_sub=node->create_subscription<Status>(core+"/control_status",qos,[this](Status::ConstSharedPtr s){if(!fresh())trajectory.break_segment();
+        state=*s;seen=true;received=std::chrono::steady_clock::now();dirty=true;
+        trajectory.sample(state.current_pose.position,rclcpp::Time(state.header.stamp).seconds(),
+          fresh() && state.connected && state.telemetry_valid && state.pose_valid && state.header.frame_id=="map");});
       markers=node->create_publisher<visualization_msgs::msg::MarkerArray>(core+"/panel_markers",qos);
       dirty=true;Q_EMIT owner->configChanged();message("已连接接口；等待新鲜状态。加载文件不会改变连接对象。");
     } catch(const std::exception &e){message(QString::fromUtf8(e.what()));}
@@ -329,6 +340,13 @@ struct FlightPanel::Impl {
     try{auto v=draft();for(size_t i=0;i<v.points.size();++i)draw(v.points[i],static_cast<int>(i),"draft",false);}catch(const std::exception &){}
     if(fresh() && state.pose_valid && (state.holding || state.mission_active || state.operation=="takeoff")){
       const auto &p=state.target_pose;draw({p.position.x,p.position.y,p.position.z,yaw(p.orientation)*180/pi},0,"active",true);}
+    if(show_trajectory->isChecked()) {
+      visualization_msgs::msg::Marker trail;trail.header.frame_id="map";trail.header.stamp=node->now();
+      trail.ns="actual_trajectory";trail.id=0;trail.type=trail.LINE_LIST;trail.action=trail.ADD;
+      trail.pose.orientation.w=1;trail.scale.x=0.035;
+      trail.color.r=0.1;trail.color.g=1.0;trail.color.b=0.65;trail.color.a=1.0;
+      trail.points=trajectory.points();if(!trail.points.empty())array.markers.push_back(trail);
+    }
     markers->publish(array);
   }
 };
