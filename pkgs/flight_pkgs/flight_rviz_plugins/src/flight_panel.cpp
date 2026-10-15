@@ -1,6 +1,7 @@
 #include "flight_rviz_plugins/flight_panel.hpp"
 #include "flight_rviz_plugins/waypoint_file.hpp"
 #include "flight_rviz_plugins/trajectory.hpp"
+#include "flight_rviz_plugins/quadrotor_model.hpp"
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/expand_topic_or_service_name.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -57,8 +58,9 @@ struct FlightPanel::Impl {
   QFrame *status_card;
   QTableWidget * table;
   QDoubleSpinBox *height,*default_z,*position_tol,*yaw_tol,*dwell,*timeout;
-  QCheckBox *check_yaw,*loop,*show_trajectory;
+  QCheckBox *check_yaw,*loop,*show_trajectory,*show_vehicle;
   Trajectory trajectory;
+  QuadrotorModel vehicle_model;
   QSpinBox *capacity;
   QPushButton *arm_button,*disarm_button,*takeoff_button,*land_button,*run_button,*step_button,*stop_button,*bind_button;
   QTimer *timer;
@@ -123,6 +125,8 @@ struct FlightPanel::Impl {
     task_value->setStyleSheet("color:#52657d;font-size:12px;");card->addWidget(task_value);
     detail_value=new QLabel;detail_value->setObjectName("status_detail");detail_value->setWordWrap(true);detail_value->setTextFormat(Qt::PlainText);detail_value->setTextInteractionFlags(Qt::TextSelectableByMouse);card->addWidget(detail_value);
     layout->addWidget(status_card);
+    show_vehicle=new QCheckBox("显示无人机模型（红色箭头为机头）");show_vehicle->setObjectName("show_vehicle");show_vehicle->setChecked(true);
+    layout->addWidget(show_vehicle);QObject::connect(show_vehicle,&QCheckBox::toggled,p,[this]{dirty=true;});
     auto *trail_controls=new QHBoxLayout;
     show_trajectory=new QCheckBox("显示实际轨迹（青绿色）");show_trajectory->setObjectName("show_trajectory");show_trajectory->setChecked(true);
     auto *clear_trail=new QPushButton("清空轨迹");clear_trail->setObjectName("clear_trajectory");
@@ -203,13 +207,14 @@ struct FlightPanel::Impl {
       }
       if(markers){visualization_msgs::msg::MarkerArray a;visualization_msgs::msg::Marker m;m.action=m.DELETEALL;a.markers.push_back(m);markers->publish(a);}
       pending=0;stop_pending=false;land_pending=false;
-      core=next;endpoint->setText(QString::fromStdString(core));++generation;seen=false;executing.clear();trajectory.clear();
+      core=next;endpoint->setText(QString::fromStdString(core));++generation;seen=false;executing.clear();trajectory.clear();vehicle_model.clear();
       arm=rclcpp_action::create_client<Arm>(node,core+"/arm");disarm=rclcpp_action::create_client<Disarm>(node,core+"/disarm");
       takeoff=rclcpp_action::create_client<Takeoff>(node,core+"/takeoff");land=rclcpp_action::create_client<Land>(node,core+"/land_action");
       mission=rclcpp_action::create_client<Mission>(node,core+"/execute_waypoints");stop=node->create_client<std_srvs::srv::Trigger>(core+"/stop");
       auto qos=rclcpp::QoS(1).reliable().transient_local();
       status_sub=node->create_subscription<Status>(core+"/control_status",qos,[this](Status::ConstSharedPtr s){if(!fresh())trajectory.break_segment();
         state=*s;seen=true;received=std::chrono::steady_clock::now();dirty=true;
+        vehicle_model.update(state.current_pose,fresh() && state.connected && state.telemetry_valid && state.pose_valid && state.header.frame_id=="map");
         trajectory.sample(state.current_pose.position,rclcpp::Time(state.header.stamp).seconds(),
           fresh() && state.connected && state.telemetry_valid && state.pose_valid && state.header.frame_id=="map");});
       markers=node->create_publisher<visualization_msgs::msg::MarkerArray>(core+"/panel_markers",qos);
@@ -346,6 +351,11 @@ struct FlightPanel::Impl {
       trail.pose.orientation.w=1;trail.scale.x=0.035;
       trail.color.r=0.1;trail.color.g=1.0;trail.color.b=0.65;trail.color.a=1.0;
       trail.points=trajectory.points();if(!trail.points.empty())array.markers.push_back(trail);
+    }
+    if(show_vehicle->isChecked()) {
+      std_msgs::msg::Header header;header.frame_id="map";header.stamp=node->now();
+      auto model=vehicle_model.markers(header,core,fresh());
+      array.markers.insert(array.markers.end(),model.markers.begin(),model.markers.end());
     }
     markers->publish(array);
   }

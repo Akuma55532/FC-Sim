@@ -64,6 +64,18 @@ MarkerArray 发布到 `<核心名称>/panel_markers`：蓝色箭头与编号为�
 默认 RViz 配置订阅 `/flight_core/panel_markers`；更换核心名称后需同步修改 MarkerArray 显示的 Topic。
 同一核心建议只开一个面板实例，避免同名 Marker 互相覆盖；这不影响核心的任务仲裁。
 
+## 无人机模型
+
+“显示无人机模型”默认开启，使用同一 `panel_markers` 话题中的 `vehicle_model` 标记。
+模型包含机身、交叉机臂、四个旋翼圆盘和红色机头箭头；标签显示当前核心名称，便于区分连接对象。
+
+- 跟随 `ControlStatus.current_pose` 的实际位置及完整四元数姿态，横滚、俯仰、偏航均参与变换。
+- 世界坐标为 map/ENU，机体约定为 FLU（X 前、Y 左、Z 上）；不会再次进行 NED 转换。
+- 外形为示意四旋翼，旋翼中心在机体 X/Y 的 ±0.22 m，圆盘直径 0.20 m；不代表真实机型尺寸，不模拟旋翼转速。
+- 状态过期、连接/遥测/位姿失效或姿态非法时，保留最后有效位置，模型变灰并显示“位姿失效 / 最后位置”；没有收到有效位姿前不显示模型。
+- 重连或切换核心时清除模型缓存；显示开关仅影响可视化，不发送任何控制请求。
+- 使用已有 RViz 配置时，启用订阅 `<核心名称>/panel_markers` 的 MarkerArray，Fixed Frame 设为 map，即可同时查看模型与轨迹；无需 URDF、TF 发布器或额外模型文件。
+
 ## 实际飞行轨迹
 
 面板从 `<核心名称>/control_status` 的 `current_pose` 记录实际位置，在现有 `panel_markers` 中发布青绿色线条（命名空间 `actual_trajectory`）。

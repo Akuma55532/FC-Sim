@@ -16,7 +16,7 @@ Visualization Manager:
       Cell Size: 1
       Plane: XY
     - Class: rviz_default_plugins/MarkerArray
-      Name: 航点、目标与实际轨迹
+      Name: 无人机、航点与实际轨迹
       Enabled: true
       Topic:
         Value: /flight_core/panel_markers

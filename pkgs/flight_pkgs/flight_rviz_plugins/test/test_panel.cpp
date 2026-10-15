@@ -123,3 +123,28 @@ TEST(Panel, ActualTrajectoryPublishesHidesAndClears) {
   panel.findChild<QPushButton*>("connect")->click();sample(3);EXPECT_TRUE(points.empty());
   ex.remove_node(node);
 }
+
+TEST(Panel, VehicleModelToggleStalenessAndReconnect) {
+  flight_rviz_plugins::FlightPanel panel;
+  panel.findChild<QLineEdit*>("core_namespace")->setText("/panel_vehicle_test");
+  panel.findChild<QPushButton*>("connect")->click();
+  auto node=std::make_shared<rclcpp::Node>("panel_vehicle_mock");
+  auto qos=rclcpp::QoS(1).reliable().transient_local();
+  auto pub=node->create_publisher<flight_interfaces::msg::ControlStatus>("/panel_vehicle_test/control_status",qos);
+  std::vector<visualization_msgs::msg::Marker> model;
+  auto sub=node->create_subscription<visualization_msgs::msg::MarkerArray>("/panel_vehicle_test/panel_markers",qos,
+    [&](visualization_msgs::msg::MarkerArray::ConstSharedPtr m){model.clear();for(const auto &v:m->markers)if(v.ns=="vehicle_model")model.push_back(v);});
+  rclcpp::executors::SingleThreadedExecutor ex;ex.add_node(node);
+  auto step=[&](bool valid){flight_interfaces::msg::ControlStatus s;s.header.stamp=node->now();s.header.frame_id="map";
+    s.connected=s.telemetry_valid=s.pose_valid=valid;s.current_pose.position.z=2;s.current_pose.orientation.w=1;
+    pub->publish(s);pump(0.1);ex.spin_some();};
+  for(int i=0;i<25 && model.empty();++i)step(true);
+  ASSERT_EQ(model.size(),8u);EXPECT_DOUBLE_EQ(model[0].pose.position.z,2);
+  panel.findChild<QCheckBox*>("show_vehicle")->setChecked(false);step(true);EXPECT_TRUE(model.empty());
+  panel.findChild<QCheckBox*>("show_vehicle")->setChecked(true);step(true);ASSERT_EQ(model.size(),8u);
+  pump(1.2);ex.spin_some();ASSERT_EQ(model.size(),8u);
+  EXPECT_NE(model.back().text.find("位姿失效"),std::string::npos);
+  step(true);ASSERT_EQ(model.size(),8u);EXPECT_EQ(model.back().text,"/panel_vehicle_test");
+  step(false);panel.findChild<QPushButton*>("connect")->click();step(false);EXPECT_TRUE(model.empty());
+  ex.remove_node(node);
+}
