@@ -33,17 +33,19 @@
 
 ## 环境与启动
 
-每个终端先加载实际安装工作空间，本文按安装脚本默认路径：
+每个终端先按[目录约定](../docs/INSTALLATION.md#目录和版本)设置实际路径，再加载环境。以下默认值仅在变量未设置时生效；仓库安装脚本默认将 MAVROS 安装到当前用户主目录下：
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/mavros_humble_ws/install/setup.bash
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
+source "$MAVROS_WS/install/setup.bash"
 ```
 
 PX4/Gazebo 在单独终端启动：
 
 ```bash
-cd ~/ws_simulator/PX4-Autopilot
+export PX4_ROOT="${PX4_ROOT:-$HOME/PX4-Autopilot}"
+cd "$PX4_ROOT"
 make px4_sitl gz_x500
 ```
 

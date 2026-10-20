@@ -4,9 +4,12 @@
 
 ## 1. 查询当前系统真实接口
 
+先按[目录约定](../docs/INSTALLATION.md#目录和版本)设置当前终端的 `MAVROS_WS`；以下命令在未设置时使用安装脚本的默认位置。
+
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/mavros_humble_ws/install/setup.bash
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
+source "$MAVROS_WS/install/setup.bash"
 
 ros2 node list
 ros2 topic list -t

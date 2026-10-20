@@ -2,6 +2,8 @@
 
 [文档导航](README.md) · [快速开始](QUICKSTART.md)
 
+本页保留历史验证结果；为便于复现，机器专属路径统一以目录变量表示。运行命令前，请在当前终端按[目录约定](INSTALLATION.md#目录和版本)设置自己的实际路径；变量名称不要求读者使用与验证机器相同的目录布局。
+
 ## 2026-10-12：构建与无界面 SITL 首次飞行
 
 使用本机已有的依赖和 PX4 工作空间完成验证；未重新执行系统安装脚本，也未重置 PX4 已有参数。因此本记录证明当前环境可以完成教程主线，不代表全新系统安装已验收。
@@ -14,8 +16,8 @@
 | MAVLink | MAVROS 启动日志报告 `2026.9.9` |
 | PX4 | `git describe` 为 `v1.17.0-beta1` |
 | Gazebo | Harmonic，gz-sim 8.15.0 |
-| 项目位置 | `/home/nv/FC-Sim` |
-| PX4 位置 | `/home/nv/ws_simulator/PX4-Autopilot` |
+| 项目位置 | `$FC_SIM_ROOT`（验证时使用的仓库根目录） |
+| PX4 位置 | `$PX4_ROOT`（验证时使用的 PX4 源码目录） |
 | ROS 通信 | 域 42，`ROS_LOCALHOST_ONLY=1` |
 | MAVROS 端点 | `udp://:14540@127.0.0.1:14580` |
 
@@ -111,8 +113,9 @@ ground_state: 1
 
 ```bash
 source /opt/ros/humble/setup.bash
-source "$HOME/mavros_humble_ws/install/setup.bash"
-export FC_SIM_ROOT="$HOME/FC-Sim"
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
+source "$MAVROS_WS/install/setup.bash"
+export FC_SIM_ROOT="${FC_SIM_ROOT:-$HOME/FC-Sim}"
 cd "$FC_SIM_ROOT"
 CMAKE_BUILD_PARALLEL_LEVEL=2 colcon build \
   --base-paths pkgs/flight_pkgs --symlink-install --executor sequential \

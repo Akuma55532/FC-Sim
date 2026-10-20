@@ -22,8 +22,8 @@
 已有材料需要解决的断点：
 
 1. `docs/` 原为空，包内 README 引用了不存在的快速开始、状态参考、排障和开发文档，部分相对路径也不符合当前目录层级。
-2. 根 README、MAVROS 说明、面板说明分别使用 `~/ws_sim`、`~/ws_simulator` 和旧 `flight_ws` 路径，缺少统一的目录约定。
-3. 安装脚本实际写入 `~/mavros_humble_ws`；仓库内的 `pkgs/mavros_humble_ws/` 当前为空，不能作为已有安装使用。
+2. 早期说明使用不同的机器专属目录和旧工作空间路径；现已统一使用 `FC_SIM_ROOT`、`PX4_ROOT` 和 `MAVROS_WS`，见[目录约定](INSTALLATION.md#目录和版本)。
+3. 安装脚本实际写入 `$HOME/mavros_humble_ws`；仓库内的 `pkgs/mavros_humble_ws/` 当前为空，不能作为已有安装使用。
 4. 缺少从源码构建本项目三个 ROS 包、逐终端加载环境、按顺序启动和验收的连贯流程。
 5. MAVROS 说明中的直接启动示例与项目的 `mavros_gcs.launch.py` 面向不同使用场景。项目教程应统一使用项目入口，并说明 GCS 心跳配置。
 6. 现有测试源码可以提供验证场景，但不能代替实际 Gazebo/PX4 飞行验收记录。
@@ -65,7 +65,7 @@ flowchart LR
 ### 前置条件
 
 - 已完成安装和编译，记录实际 PX4、MAVROS、ROS 和 Gazebo 版本。
-- 统一目录变量：`FC_SIM_ROOT` 指向仓库，`PX4_ROOT` 指向 PX4 源码，MAVROS 安装遵循脚本的 `~/mavros_humble_ws`。
+- 统一目录变量：`FC_SIM_ROOT` 指向仓库，`PX4_ROOT` 指向 PX4 源码，`MAVROS_WS` 指向 MAVROS 工作空间；使用仓库安装脚本时为 `$HOME/mavros_humble_ws`。
 - 拟采用在仓库根目录执行 `colcon build --base-paths pkgs/flight_pkgs --symlink-install` 的构建方式；正文发布前验证依赖与产物路径。
 - 每个 ROS 终端按顺序加载 ROS、MAVROS、本项目 overlay，并使用相同 ROS 域。PX4 终端单独列出。
 

@@ -18,8 +18,10 @@
 
 ## 1. 终端 A：启动仿真
 
+先按[目录约定](INSTALLATION.md#目录和版本)设置实际 `PX4_ROOT`；下方默认位置仅在变量未设置时生效。
+
 ```bash
-export PX4_ROOT="$HOME/ws_simulator/PX4-Autopilot"
+export PX4_ROOT="${PX4_ROOT:-$HOME/PX4-Autopilot}"
 cd "$PX4_ROOT"
 make px4_sitl gz_x500
 ```

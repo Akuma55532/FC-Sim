@@ -7,8 +7,14 @@
 
 ## 启动
 
+先按[目录约定](../../../docs/INSTALLATION.md#目录和版本)设置当前终端的实际路径。以下命令在变量未设置时使用默认位置：
+
 ```bash
-source ~/ws_simulator/flight_ws/install/setup.bash
+export FC_SIM_ROOT="${FC_SIM_ROOT:-$HOME/FC-Sim}"
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
+source /opt/ros/humble/setup.bash
+source "$MAVROS_WS/install/setup.bash"
+source "$FC_SIM_ROOT/install/setup.bash"
 ros2 launch flight_rviz_plugins panel.launch.py
 ```
 

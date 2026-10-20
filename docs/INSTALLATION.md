@@ -6,17 +6,24 @@
 
 ## 目录和版本
 
-以下目录贯穿教程。仓库不在 `~/FC-Sim` 时，将每处 `FC_SIM_ROOT` 改为实际位置；已有 PX4 源码也可直接指定其路径。
+以下目录变量贯穿教程，适用于任意用户名和工作目录。`$HOME` 自动表示当前用户的主目录，无需填写用户名。默认示例将项目和 PX4 放在主目录下，不要求创建特定名称的工作目录。
+
+在每个新 Bash 终端中先设置这些变量；若实际位置不同，将下方默认路径改为自己的绝对路径。`FC_SIM_ROOT` 必须指向已有的 FC-Sim 仓库根目录，`PX4_ROOT` 指向已有源码或准备克隆到的目录，`MAVROS_WS` 指向 MAVROS 工作空间根目录（不含 `install`）。
 
 ```bash
-export FC_SIM_ROOT="$HOME/FC-Sim"
-export PX4_ROOT="$HOME/ws_simulator/PX4-Autopilot"
+export FC_SIM_ROOT="${FC_SIM_ROOT:-$HOME/FC-Sim}"
+export PX4_ROOT="${PX4_ROOT:-$HOME/PX4-Autopilot}"
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
 ```
+
+`${变量:-默认值}` 表示保留已设置的路径，仅在变量未设置或为空时使用默认值。后续章节沿用这一写法，不会覆盖你在当前终端设置的路径。变量不会自动传到其他新终端；请在新终端重复设置，或将这三行按实际路径配置到自己的 Bash 启动文件中。路径含空格时也应保留双引号。
+
+例如，已有 PX4 源码位于其他磁盘时，可先执行 `export PX4_ROOT="/data/simulation/PX4-Autopilot"`，后续命令无需改动。`/opt/ros/humble` 和 `/usr/share/GeographicLib` 等是系统安装路径，不依赖用户名。
 
 | 组件 | 教程基线 | 位置 |
 |---|---|---|
 | ROS 2 | Humble，Ubuntu 22.04 | `/opt/ros/humble` |
-| MAVROS | 2.16.0 | `~/mavros_humble_ws` |
+| MAVROS | 2.16.0 | `$MAVROS_WS` |
 | MAVLink 消息包 | ROS 发布标签 `release/rolling/mavlink/2026.9.9-1` | MAVROS 工作空间内 |
 | PX4 | `v1.17.0-beta1` | `$PX4_ROOT` |
 | Gazebo | Harmonic（gz-sim 8） | 系统安装 |
@@ -53,11 +60,11 @@ command -v rosdepc
 在未加载其他 ROS 工作空间的新终端中执行，使用普通用户，脚本会按需调用 sudo：
 
 ```bash
-export FC_SIM_ROOT="$HOME/FC-Sim"
+export FC_SIM_ROOT="${FC_SIM_ROOT:-$HOME/FC-Sim}"
 bash "$FC_SIM_ROOT/deploy/install-humble-mavros.sh"
 ```
 
-[脚本](../deploy/install-humble-mavros.sh)会安装构建工具、拉取固定标签、安装 ROS 依赖及 GeographicLib 数据集，并以两个编译任务构建到 `~/mavros_humble_ws/install`。它不接受路径参数。
+[脚本](../deploy/install-humble-mavros.sh)会安装构建工具、拉取固定标签、安装 ROS 依赖及 GeographicLib 数据集，并以两个编译任务构建到当前用户的 `$HOME/mavros_humble_ws/install`。它不接受路径参数，也不读取 `MAVROS_WS`；使用此脚本安装时，请将 `MAVROS_WS` 设为 `$HOME/mavros_humble_ws`。若已通过其他方式安装 MAVROS，可将 `MAVROS_WS` 设为已有工作空间，以便后续加载环境。
 
 如果目录已有不同版本的源码，脚本会退出。先核对现有版本并备份，再决定是否另行安置冲突目录；不要直接覆盖已有工作空间。
 
@@ -65,7 +72,8 @@ bash "$FC_SIM_ROOT/deploy/install-humble-mavros.sh"
 
 ```bash
 source /opt/ros/humble/setup.bash
-source "$HOME/mavros_humble_ws/install/setup.bash"
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
+source "$MAVROS_WS/install/setup.bash"
 ros2 pkg prefix mavros
 ros2 pkg executables mavros
 ros2 interface show mavros_msgs/msg/State
@@ -80,11 +88,11 @@ ls /usr/share/GeographicLib/geoids/egm96-5.pgm \
 以下克隆命令用于尚无 PX4 源码的环境：
 
 ```bash
-mkdir -p "$HOME/ws_simulator"
+export PX4_ROOT="${PX4_ROOT:-$HOME/PX4-Autopilot}"
+mkdir -p "$(dirname "$PX4_ROOT")"
 git clone --branch v1.17.0-beta1 --recursive \
   https://github.com/PX4/PX4-Autopilot.git \
-  "$HOME/ws_simulator/PX4-Autopilot"
-export PX4_ROOT="$HOME/ws_simulator/PX4-Autopilot"
+  "$PX4_ROOT"
 cd "$PX4_ROOT"
 bash ./Tools/setup/ubuntu.sh --no-nuttx
 ```
@@ -94,7 +102,7 @@ bash ./Tools/setup/ubuntu.sh --no-nuttx
 编译并启动一次仿真：
 
 ```bash
-export PX4_ROOT="$HOME/ws_simulator/PX4-Autopilot"
+export PX4_ROOT="${PX4_ROOT:-$HOME/PX4-Autopilot}"
 cd "$PX4_ROOT"
 make px4_sitl gz_x500
 ```

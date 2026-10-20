@@ -6,12 +6,13 @@
 
 ## 1. 加载基础环境并检查包
 
-打开新 Bash 终端，仅加载 ROS 和 MAVROS：
+打开新 Bash 终端，先按[目录约定](INSTALLATION.md#目录和版本)设置自己的路径；以下命令仅在变量未设置时使用默认位置。然后加载 ROS 和 MAVROS：
 
 ```bash
-export FC_SIM_ROOT="$HOME/FC-Sim"
+export FC_SIM_ROOT="${FC_SIM_ROOT:-$HOME/FC-Sim}"
 source /opt/ros/humble/setup.bash
-source "$HOME/mavros_humble_ws/install/setup.bash"
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
+source "$MAVROS_WS/install/setup.bash"
 cd "$FC_SIM_ROOT"
 colcon list --base-paths pkgs/flight_pkgs
 ```
@@ -62,12 +63,13 @@ ros2 launch flight_rviz_plugins panel.launch.py --show-args
 
 ## 5. 后续每个 ROS 终端的公共前缀
 
-快速开始中的 B、C、D、E 终端均先执行以下内容：
+快速开始中的 B、C、D、E 终端均先按[目录约定](INSTALLATION.md#目录和版本)设置实际路径，再执行以下内容：
 
 ```bash
-export FC_SIM_ROOT="$HOME/FC-Sim"
+export FC_SIM_ROOT="${FC_SIM_ROOT:-$HOME/FC-Sim}"
 source /opt/ros/humble/setup.bash
-source "$HOME/mavros_humble_ws/install/setup.bash"
+export MAVROS_WS="${MAVROS_WS:-$HOME/mavros_humble_ws}"
+source "$MAVROS_WS/install/setup.bash"
 source "$FC_SIM_ROOT/install/setup.bash"
 export ROS_DOMAIN_ID=42
 export ROS_LOCALHOST_ONLY=1
